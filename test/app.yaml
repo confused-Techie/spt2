@@ -1,0 +1,5 @@
+port: 8080
+tasks:
+  - name: "Startup Task Test"
+    schedule: startup
+    action: test
