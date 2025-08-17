@@ -133,7 +133,7 @@ class Task {
       host: "task",
       short_message: `Executed task '${task.name}'`
     };
-    for (const key of taskRunStatus) {
+    for (const key in taskRunStatus) {
       logObj[`_${key}`] = taskRunStatus[key];
     }
     this.log.debug(logObj);

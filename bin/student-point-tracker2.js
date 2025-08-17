@@ -15,7 +15,7 @@ let resourcePath;
 // process.resourcePath = resourcePath;
 //
 
-resourcePath = "./test"; // TODO
+resourcePath = "./demo"; // TODO
 
 // Handle initial server startup
 const Log = require("../src/log.js");

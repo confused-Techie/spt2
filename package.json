@@ -1,12 +1,15 @@
 {
   "dependencies": {
+    "@databases/pg-test": "^3.1.2",
     "compression": "^1.8.1",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "js-yaml": "^4.1.0",
+    "key-path-helpers": "github:pulsar-edit/key-path-helpers",
     "node-schedule": "^2.1.1",
     "passport": "^0.7.0",
     "passport-google-oidc": "^0.1.0",
+    "postgres": "^3.4.7",
     "session-file-store": "^1.5.0",
     "uuid": "^11.1.0"
   }

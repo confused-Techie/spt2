@@ -13,6 +13,9 @@ class Frontend {
     this.log = this.server.log;
     this.config = this.server.config;
 
+    this.endpointSetupFuncs = []; // An array of functions that allow setting up
+    // various endpoints to expand on the system.
+
     this.app = null; // Instance of `express`
     this.serve = null; // Instance of the running server
     this.passport = passport;
@@ -45,7 +48,7 @@ class Frontend {
         });
       });
 
-      this.passport.deserializerUser((user, cb) => {
+      this.passport.deserializeUser((user, cb) => {
         process.nextTick(() => {
           return cb(null, user);
         });
@@ -65,7 +68,7 @@ class Frontend {
           typeof profile.emails[0]?.value !== "string"
         ) {
           this.log.warn({
-            host: "frontend",
+            host: "frontend.login",
             short_message: "Invalid email object retreived from Google.",
             _profile: profile
           });
@@ -76,21 +79,21 @@ class Frontend {
           const usrObj = {
             issuer: issuer,
             id: profile.id,
-            displayName: profile.displayName,
+            display_name: profile.displayName,
             first_name: profile.name.givenName,
             last_name: profile.name.familyName,
             email: profile.emails[0].value
           };
 
           this.log.debug({
-            host: "frontend",
+            host: "frontend.login",
             short_message: `Successfully authenticated '${usrObj.email}'.`,
             _usrObj: usrObj
           });
           return cb(null, usrObj);
         } else {
           this.log.warn({
-            host: "frontend",
+            host: "frontend.login",
             short_message: `Bad email domain attempted to be used during login! '${profile.emails[0].value}'.`,
             _profile: profile
           });
@@ -108,7 +111,12 @@ class Frontend {
         })
       );
     }
-    // TODO setup other endpoints
+
+    // Setup all other endpoints provided via `this.endpointSetupFuncs`
+    for (const endpointFunc of this.endpointSetupFuncs) {
+      endpointFunc(this);
+    }
+
   }
 
   listen() {

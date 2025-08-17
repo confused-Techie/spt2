@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const yaml = require("js-yaml");
+const keyPathHelpers = require("key-path-helpers");
 
 const defaultConfig = require("./app.default.js");
 
@@ -78,16 +79,19 @@ class Config {
     }
   }
 
-  get(key) {
-    if (this.settings[key]) {
-      return this.settings[key];
-    } else {
-      return defaultConfig[key];
-    }
+  get(keyPath) {
+    let value =
+      keyPathHelpers.getValueAtKeyPath(this.settings, keyPath) ??
+      keyPathHelpers.getValueAtKeyPath(defaultConfig, keyPath) ??
+      process.env[keyPath] ??
+      null;
+    return value;
   }
 
-  set(key, value) {
-    this.settings[key] = value;
+  set(keyPath, value) {
+    // TODO observe pulsar/src/config.js#setRawValue more closely for handling
+    // errors and values that match the default
+    keyPathHelpers.setValueAtKeyPath(this.settings, keyPath, value);
     // TODO Maybe attempt to validate key values?
     // Now write back changes to disk
 
