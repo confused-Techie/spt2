@@ -34,7 +34,7 @@ class Endpoints {
       // The user is not logged in, and forceAuthentication is enabled
       return {
         status: true,
-        location: "/login"
+        location: "/login" // TODO should we redirect to requestLogin
       };
     } else { // TODO student redirection
       // There is no need to redirect the user
