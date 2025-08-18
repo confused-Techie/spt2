@@ -3,7 +3,7 @@ const path = require("node:path");
 const yaml = require("js-yaml");
 const keyPathHelpers = require("key-path-helpers");
 
-const defaultConfig = require("./app.default.js");
+const defaultConfig = require("./config.default.js");
 
 const VALID_CONFIG_FILENAMES = [ "app.yaml", "app.json" ];
 

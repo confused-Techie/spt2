@@ -2,6 +2,8 @@
   Assists in determining the permissions of a user and if they are authenticated.
 */
 
+const RE_PERMISSION = /^(?<action>[a-z*]+):(?<namespace>[a-z*]+).(?<resource>[a-z*]+)$/;
+
 module.exports =
 class Auth {
   constructor(server) {
@@ -26,23 +28,54 @@ class Auth {
     return usrObj;
   }
 
-  canUserPreformAction(usrObj, action) {
-    // action examples: `edit.googleClientId`, `view.studentPoints`, `add.studentPoints` etc
-    // Each action that can be made within the system should have an associated
-    // `action` handle, which can be assigned per role and each role can then be assigned to the user.
-    // In the config we should have a list of `users`, each user then has a list of roles.
-    // Additionally a top level key will be a list of roles, and the permissions they
-    // are given. With each permission being the action examples above. Although maybe
-    // the other way `studentPoints.view` so that `studentPoints.*` can exist and
-    // easily provide permissions for all actions in the namespace.
-    // Then roles can be created as needed completey custom.
-    // Lastly, we will likely want a way to allow easy login and identification of
-    // permissions. Such as allowing anyone in the org to have view permissions.
-    // Or regex to assign a role, allowing any teacher to have the view permissions.
+  objectifyPermission(permission) {
+    if (typeof permission !== "string") {
+      throw new Error("Permissions MUST be a string");
+    }
+
+    const validPermission = RE_PERMISSION.test(permission);
+
+    if (!validPermission) {
+      throw new Error(`Invalid permission format of '${permission}'`);
+    }
+
+    // Decode permission
+    const re = RE_PERMISSION.exec(permission);
+
+    return {
+      action: re.groups.action,
+      namespace: re.groups.namespace,
+      resource: re.groups.resource
+    };
+  }
+
+  canUserPreformAction(usrObj, permission) {
+    if (typeof usrObj !== "object" || Object.keys(usrObj).length < 1) {
+      // No valid usrObj provided
+      return false;
+    }
+
+    const permObj = this.objectifyPermission(permission);
+
+    // Now find whatever permissions the user has that matches with the resource
+    for (const candidate of usrObj.permissions) {
+      const candidateObj = this.objectifyPermission(candidate);
+      if (candidateObj.namespace === permObj.namespace || candidateObj.namespace === "*") {
+        // Namespace match found, now check resource
+        if (candidateObj.resource === permObj.resource || candidateObj.resource === "*") {
+          // Resource matches, now ensure action
+          if (candidateObj.action === permObj.action || candidateObj.action === "*") {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
   }
 
   getRolesForUser(userEmail) {
-    const users = this.config.get("users");
+    const users = this.config.get("permissions.users");
 
     let foundUser = null;
 
@@ -60,7 +93,7 @@ class Auth {
   }
 
   getPermissionsForRole(roleName) {
-    const roles = this.config.get("roles");
+    const roles = this.config.get("permissions.roles");
 
     let foundRole = null;
 

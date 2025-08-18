@@ -18,6 +18,7 @@ class Frontend {
 
     this.app = null; // Instance of `express`
     this.serve = null; // Instance of the running server
+    this.sessionFileStore = null; // Instance of our session file store
     this.passport = passport;
   }
 
@@ -27,16 +28,19 @@ class Frontend {
     // Basic setup
     this.app.use(compression());
 
-    if (this.server.config.get("enableAuthentication")) {
+    if (this.server.config.get("authentication.enableAuthentication")) {
+
+      this.sessionFileStore = new SessionFileStore({
+        path: path.join(this.config.resourcePath, "sessions"),
+        ttl: this.config.get("authentication.sessionFileStoreTtl")
+      });
+
       this.app.use(
         session({
-          secret: this.config.get("sessionSecret"),
+          secret: this.config.get("authentication.sessionSecret"),
           resave: false,
           saveUninitialized: false,
-          store: new SessionFileStore({
-            path: path.join(this.config.resourcePath, "sessions"),
-            ttl: this.config.get("sessionFileStoreTtl")
-          })
+          store: this.sessionFileStore
         })
       );
 
@@ -57,8 +61,8 @@ class Frontend {
       this.passport.use(
         "google",
         new GoogleStrategy({
-          clientID: this.config.get("googleClientId"),
-          clientSecret: this.config.get("googleClientSecret"),
+          clientID: this.config.get("authentication.googleClientId"),
+          clientSecret: this.config.get("authentication.googleClientSecret"),
           callbackURL: "/oauth2/redirect",
           scope: ["profile", "email", "openid"]
         },
@@ -75,7 +79,7 @@ class Frontend {
           return cb("Invalid email object retreived from Google.");
         }
 
-        if (profile.emails[0].value.endsWith(this.config.get("domain"))) {
+        if (profile.emails[0].value.endsWith(this.config.get("authentication.domain"))) {
           const usrObj = {
             issuer: issuer,
             id: profile.id,
@@ -120,10 +124,10 @@ class Frontend {
   }
 
   listen() {
-    this.serve = this.app.listen(this.config.get("port"), () => {
+    this.serve = this.app.listen(this.config.get("server.port"), () => {
       this.server.log.notice({
         host: "frontend",
-        short_message: `Server Listening on port ${this.config.get("port")}.`
+        short_message: `Server Listening on port ${this.config.get("server.port")}.`
       });
     });
   }
@@ -135,5 +139,64 @@ class Frontend {
         short_message: "HTTP Server Closed."
       });
     });
+  }
+
+  async getActiveSessions() {
+    // Get all currently active authenticated sessions
+
+    if (!this.sessionFileStore) {
+      // The file store was never initialized, we likely aren't using authentication
+      return [];
+    }
+
+    // Declare async wrappers around callback style file session store interface
+    const list = async () => {
+      return new Promise((resolve, reject) => {
+        this.sessionFileStore.list((err, files) => {
+          if (err) {
+            reject(err);
+          }
+          resolve(files);
+        });
+      });
+    };
+
+    const expired = async (sessionId) => {
+      return new Promise((resolve, reject) => {
+        this.sessionFileStore.expired(sessionId, (err, isExpired) => {
+          if (err) {
+            reject(err);
+          }
+          resolve(isExpired);
+        });
+      });
+    };
+
+    const get = async (sessionId) => {
+      return new Promise((resolve, reject) => {
+        this.sessionFileStore.get(sessionId, (err, result) => {
+          if (err) {
+            reject(err);
+          }
+          resolve(result);
+        });
+      });
+    };
+
+    const activeSessions = [];
+
+    const allSessions = await list();
+
+    for (const session of allSessions) {
+      const sessionId = session.replace(".json", "");
+      const isExpired = await expired(sessionId);
+
+      if (!isExpired) {
+        const result = await get(sessionId);
+        activeSessions.push(result);
+      }
+    }
+
+    return activeSessions;
   }
 }

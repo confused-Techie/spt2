@@ -12,25 +12,25 @@ class Database {
   }
 
   async initialize() {
-    if (this.config.get("dev")) {
+    if (this.config.get("server.dev")) {
       // Dev Setup of database
       const dbSetup = require("../node_modules/@databases/pg-test/jest/globalSetup");
       this.dbTeardown = require("../node_modules/@databases/pg-test/jest/globalTeardown");
 
-      await dbSetup();
+      await dbSetup(); // TODO wrap in error handler to warn of docker not running
     }
   }
 
   start() {
     const postgresOpts = {
-      host: this.config.get("db.host"),
-      username: this.config.get("db.user"),
-      database: this.config.get("db.database"),
-      port: this.config.get("db.port")
+      host: this.config.get("database.host"),
+      username: this.config.get("database.user"),
+      database: this.config.get("database.database"),
+      port: this.config.get("database.port")
     };
 
     if (!this.config.get("dev")) {
-      postgresOpts.password = this.config.get("db.pass");
+      postgresOpts.password = this.config.get("database.pass");
     }
 
     this.sql = postgres(postgresOpts);
@@ -45,7 +45,7 @@ class Database {
     if (this.sql !== null) {
       await this.sql.end({ timeout: 5 });
 
-      if (this.config.get("dev")) {
+      if (this.config.get("server.dev")) {
         await this.dbTeardown();
       }
 

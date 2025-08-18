@@ -1,0 +1,20 @@
+<%- include("./fragments/header"); %>
+  <div class="bulma-container">
+    <table class="bulma-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Last Online</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% for (const session of content.sessions) { %>
+          <tr>
+            <td><%=session.passport.user.email%></td>
+            <td><%=session.__lastAccess%></td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+<%- include("./fragments/footer"); %>
