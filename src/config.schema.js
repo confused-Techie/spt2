@@ -14,6 +14,14 @@ module.exports = {
       dev: {
         type: "boolean",
         description: "Whether or not the server is running in development mode."
+      },
+      allowNegativePoints: {
+        type: "boolean",
+        description: "Whether or not students are allowed to go into negative points."
+      },
+      paginationLimit: {
+        type: "integer",
+        description: "Search result pagination limit."
       }
     }
   },

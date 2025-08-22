@@ -1,3 +1,15 @@
+/**
+  When interacting with methods in this class to manipulate the database, keep
+  in mind that queries will respond with status objects, not errors.
+  Inside the status object is the following properties:
+
+  - `ok` [Boolean]: Mandatory, indicates success or failure.
+  - `content` [Any]: The optional results of the query.
+  - `code` [Integer]: The optional error code of what went wrong. Follows suite
+      of HTTP status codes, with the following valid possibilities:
+        * `404`: not found
+        * `500`: server error
+*/
 const postgres = require("postgres");
 
 module.exports =
@@ -17,11 +29,20 @@ class Database {
       const dbSetup = require("../node_modules/@databases/pg-test/jest/globalSetup");
       this.dbTeardown = require("../node_modules/@databases/pg-test/jest/globalTeardown");
 
-      await dbSetup(); // TODO wrap in error handler to warn of docker not running
+      try {
+        await dbSetup();
+      } catch(err) {
+        this.log.panic({
+          host: "database",
+          short_message: "Failed to startup dev database!",
+          full_message: "Failed to start development database, is Docker running?",
+          _err: err
+        });
+      }
     }
   }
 
-  start() {
+  async start() {
     const postgresOpts = {
       host: this.config.get("database.host"),
       username: this.config.get("database.user"),
@@ -34,11 +55,53 @@ class Database {
     }
 
     this.sql = postgres(postgresOpts);
+
     this.log.debug({
       host: "database",
       short_message: "SQL Connection Initiated"
     });
-    // TODO db migrations
+
+
+    // DB Migrations
+    // While tools exist to handle this, may be the simplest to just do these ourselves
+    // Most tools seem to want to run via cli and all sorts of fancy business, but...
+    try {
+      await this.sql`
+        CREATE EXTENSION pgcrypto;
+
+        CREATE TABLE students (
+          student_id BIGINT NOT NULL PRIMARY KEY
+          first_name VARCHAR(128) NOT NULL,
+          last_name VARCHAR(128) NOT NULL,
+          created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          enabled BOOLEAN NOT NULL DEFAULT TRUE,
+          points BIGINT NOT NULL DEFAULT 0
+        );
+
+        CREATE TYPE pointsAction AS ENUM('added', 'removed');
+
+        CREATE TABLE points (
+          point_id UUID DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
+          student BIGINT NOT NULL REFERENCES students(student_id),
+          points_modified BIGINT NOT NULL DEFAULT 0,
+          points_action pointsAction NOT NULL,
+          created TIMESTAMP WIHT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          total_points_before BIGINT NOT NULL,
+          total_points_after BIGINT NOT NULL,
+          reason text
+        );
+      `;
+      this.log.debug({
+        host: "database",
+        short_message: "Preformed migrations"
+      });
+    } catch(err) {
+      this.log.panic({
+        host: "database",
+        short_message: "Failed to complete migrations!",
+        _err: err
+      });
+    }
   }
 
   async stop() {
@@ -57,5 +120,242 @@ class Database {
   }
 
   // Actual Queries
+  async getStudentByID(id) {
+    const command = await this.sql`
+      SELECT *
+      FROM students
+      WHERE student_id = ${id};
+    `;
+
+    return command.count !== 0
+      ? { ok: true, content: command[0] }
+      : {
+          ok: false,
+          content: `Student ${id} not found.`,
+          code: 404
+        };
+  }
+
+  async addPointsToStudent(id, points, reason) {
+    let student = await this.getStudentByID(id);
+
+    if (!student.ok) {
+      return student;
+    }
+
+    const newPointsTotal = parseInt(student.content.points, 10) + parseInt(points, 10);
+
+    return await this.sql
+      .begin(async (sqlTrans) => {
+        let insertNewPoints = {};
+        try {
+          insertNewPoints = await sqlTrans`
+            INSERT INTO points (student, points_modified, points_action, total_points_before, total_points_after, reason)
+            VALUES (${id}, ${points}, 'added', ${student.content.points}, ${newPointsTotal}, ${reason})
+            RETURNING point_id;
+          `;
+        } catch(e) {
+          throw `A constraint has been voilated while inserting ${id}'s new points! ${e.toString()}`;
+        }
+
+        if (!insertNewPoints.count) {
+          throw `Cannot insert points to ${id}!`;
+        }
+
+        // Add the new total points
+        let modifyPoints = {};
+        try {
+          modifyPoints = await sqlTrans`
+            UPDATE students
+            SET points = ${newPointsTotal}
+            WHERE student_id = ${id} AND enabled = TRUE
+            RETURNING student_id;
+          `;
+        } catch(e) {
+          throw `A constraint has been voilated while inserting ${id}'s new points! ${e.toString()}`;
+        }
+
+        if (!modifyPoints.count) {
+          throw `Cannot insert points to ${id}!`;
+        }
+
+        return { ok: true };
+      })
+      .catch((err) => {
+        return {
+          ok: false,
+          content: err,
+          code: 500
+        };
+      });
+  }
+
+  async addStudent(obj) {
+    const command = await this.sql`
+      INSERT INTO students (student_id, first_name, last_name)
+      VALUES (${obj.student_id}, ${obj.first_name}, ${obj.last_name})
+      RETURNING student_id;
+    `;
+
+    return command.count !== 0
+      ? { ok: true, content: command[0] }
+      : { ok: false, content: command, code: 500 };
+  }
+
+  async disableStudentByID(id) {
+    const command = await this.sql`
+      UPDATE students
+      SET enabled = FALSE
+      WHERE student_id = ${id}
+      RETURNING student_id;
+    `;
+
+    return command.count !== 0
+      ? { ok: true, content: command[0] }
+      : { ok: false, content: command, code: 500 };
+  }
+
+  async getAllStudentIDs() {
+    const command = await this.sql`
+      SELECT *
+      FROM students
+      WHERE enabled = TRUE;
+    `;
+
+    return command.count !== 0
+      ? { ok: true, content: command }
+      : { ok: false, content: "no students found", code: 404 };
+  }
+
+  async getPointsByStudentID(id) {
+    const command = await this.sql`
+      SELECT *
+      FROM points
+      WHERE student = ${id}
+      ORDER BY created DESC;
+    `;
+
+    return command.count !== 0
+      ? { ok: true, content: command }
+      : { ok: false, content: `Student ${id} not found, or no points found.`, short: 404 };
+  }
+
+  async getPointsByStudentIdByDate(id, date) {
+    /**
+      * It is mandatory that the dates provided to this method are exactly as follows:
+      * 'YYYY-MM-DDTHH:mi:ss.msZ'
+      * A format loosely based off ISO8601
+      * And what you are provided using JavaScript: 'new Date().toISOString()'
+      * Any other format WILL NOT WORK.
+    */
+    const modifiedDate = date.replace("T", " "); // remove 'T' const from JavaScript
+    // timezone. Seems this value causes hour parsing within PostgreSQL to fail.
+    const command = this.sql`
+      SELECT *
+      FROM points
+      WHERE student = ${id} AND created >= to_timestamp(${modifiedDate}, 'YYYY-MM-DD HH24:MI:SS.MSZ') at time zone 'utc'
+      ORDER BY created DESC;
+    `;
+
+    return command.count !== 0
+      ? { ok: true, content: command }
+      : { ok: false, content: `Student ${id} not found, or points not found.`, code: 404 };
+  }
+
+  async removePointsFromStudent(id, points, reason) {
+    let student = await this.getStudentByID(id);
+
+    if (!student.ok) {
+      return student;
+    }
+
+    let newPointsTotal = parseInt(student.content.points, 10) - parseInt(points, 10);
+
+    if (newPointsTotal < 0 && this.config.get("server.allowNegativePoints")) {
+      newPointsTotal = 0;
+    }
+
+    return await this.sql
+      .begin(async (sqlTrans) => {
+        let insertNewPoints = {};
+        try {
+          insertNewPoints = await sqlTrans`
+            INSERT INTO points (student, points_modified, points_action, total_points_before, total_points_after, reason)
+            VALUES (${id}, ${points}, 'removed', ${student.content.points}, ${newPointsTotal}, ${reason})
+            RETURNING point_id;
+          `;
+        } catch(e) {
+          throw `A constraint has been voilated while removing ${id}'s new negative points! ${e.toString()}`;
+        }
+
+        if (!insertNewPoints.count) {
+          throw `Cannot remove points from ${id}!`;
+        }
+
+        // Add the new total points
+        let modifyPoints = {};
+        try {
+          modifyPoints = await sqlTrans`
+            UPDATE students
+            SET points = ${newPointsTotal}
+            WHERE student_id = ${id} AND enabled = TRUE
+            RETURNING student_id;
+          `;
+        } catch(e) {
+          throw `A constraint has been voilated while removing ${id}'s new negative points! ${e.toString()}`;
+        }
+
+        if (!modifyPoints.count) {
+          throw `Cannot remove points from ${id}!`;
+        }
+
+        return { ok: true };
+      })
+      .catch((err) => {
+        return {
+          ok: false,
+          content: err,
+          code: 500
+        };
+      });
+  }
+  // TODO see if we need to migrate the remove student method
+  async searchStudent(query, page) {
+    const limit = this.config.get("server.paginationLimit");
+    const offset = page > 1 ? (page - 1) * limit : 0;
+
+    const wordSeparators = /[-. ]/g; // Word Separators: - . SPACE
+    const searchTerm =
+      "%" + query.toLowerCase().replace(wordSeparators, "%") + "%";
+
+    const command await this.sql`
+      SELECT *
+      FROM students
+      WHERE
+      (
+        LOWER(first_name) LIKE ${searchTerm}
+        OR LOWER(last_name) LIKE ${searchTerm}
+        OR CAST(student_id AS TEXT) LIKE ${searchTerm}
+      ) AND enabled = TRUE
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+
+    const resultCount = command.length ?? 0;
+    const quotient = Math.trunc(resultCount / limit);
+    const remainder = resultCount % limit;
+    const totalPages = quotient + (remainder > 0 ? 1 : 0);
+
+    return {
+      ok: true,
+      content: command,
+      pagination: {
+        count: resultCount,
+        page: page < totalPages ? page : totalPages,
+        total: totalPages,
+        limit: limit
+      }
+    };
+  }
 
 }
