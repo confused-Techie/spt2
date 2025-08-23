@@ -328,7 +328,7 @@ class Database {
     const searchTerm =
       "%" + query.toLowerCase().replace(wordSeparators, "%") + "%";
 
-    const command await this.sql`
+    const command = await this.sql`
       SELECT *
       FROM students
       WHERE

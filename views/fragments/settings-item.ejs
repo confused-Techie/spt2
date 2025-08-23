@@ -1,0 +1,36 @@
+<% if (content.schema.type === "object") { %>
+  <p class="bulma-is-size-<%= size %>">
+    <%= key %>
+  </p>
+  <% for (const innerKey in content.schema.properties) { %>
+    <%- include("./fragments/settings-item", { configGet: `${configGet}.${innerKey}`, key: innerKey, size: size-1, content: { schema: content.schema.properties[innerKey] }}); %>
+  <% } %>
+<% } else if (content.schema.type === "array") { %>
+  <% for (const item in content.schema.items) { %>
+
+  <% } %>
+<% } else if (content.schema.type === "number" || content.schema.type === "string") { %>
+  <div class="bulma-field">
+    <label class="bulma-label">
+      <%= key %>
+    </label>
+    <div class="bulma-control">
+      <input
+        class="bulma-input"
+        type=<% if (content.schema.type === "string") { %> "text" <% } else if (content.schema.type === "number") { %> "number" <% } %>
+        value="<%= config.get(`${configGet}`); %>"
+      >
+      <p class="bulma-help"><%= content.schema.description %></p>
+    </div>
+  </div>
+<% } else if (content.schema.type === "boolean") { %>
+  <div class="bulma-field">
+    <div class="bulma-control">
+      <label class="bulma-checkbox">
+        <input type="checkbox" <% if (config.get(`${configGet}`)) { %>checked<%}%>>
+        <%= key %>
+        <p class="bulma-help"><%= content.schema.description %></p>
+      </label>
+    </div>
+  </div>
+<% } %>

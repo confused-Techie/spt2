@@ -20,7 +20,7 @@ module.exports = {
         description: "Whether or not students are allowed to go into negative points."
       },
       paginationLimit: {
-        type: "integer",
+        type: "number",
         description: "Search result pagination limit."
       }
     }
@@ -76,23 +76,18 @@ module.exports = {
         type: "array",
         items: {
           type: "object",
-          name: {
-            type: "string",
-            description: "The name of the role."
-          },
-          permissions: {
-            type: "array",
-            description: "The permissions assigned to the role.",
-            items: {
+          properties: {
+            name: {
               type: "string",
-              enum: [
-                "config.*.*",
-                "config.server:port.*", "config.server:port.view", "config.server:port.edit",
-                "config.database:host.*", "config.database:host.view", "config.database:host.edit",
-                "config.database:user.*", "config.database:user.view", "config.database:user.edit",
-                "config.database:database.*", "config.database:database.view", "config.database:database.edit",
-                "config.database:port.*", "config.database:port.view", "config.database:port.edit",
-              ]
+              description: "The name of the role."
+            },
+            permissions: {
+              type: "array",
+              description: "The permissions assigned to the role.",
+              items: {
+                type: "string",
+                enum: []
+              }
             }
           }
         }

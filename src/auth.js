@@ -62,9 +62,12 @@ class Auth {
       const candidateObj = this.objectifyPermission(candidate);
       if (candidateObj.namespace === permObj.namespace || candidateObj.namespace === "*") {
         // Namespace match found, now check resource
-        if (candidateObj.resource === permObj.resource || candidateObj.resource === "*") {
+        if (candidateObj.resource === permObj.resource || candidateObj.resource === "*" || permObj.resource === "*") {
           // Resource matches, now ensure action
-          if (candidateObj.action === permObj.action || candidateObj.action === "*") {
+          if (
+            candidateObj.action === permObj.action || candidateObj.action === "*" ||
+            (candidateObj.action === "edit" && permObj.action === "view") // If you have 'edit' perms you implicitly get 'view' perms
+          ) {
             return true;
           }
         }

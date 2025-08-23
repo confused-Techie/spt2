@@ -21,6 +21,10 @@ class Endpoints {
     // GET:/login - Setup for auth, default login prompt
     // GET:/requestLogin - Setup for auth, failed login redirect (reconsider?) TODO
     frontend.app.get("/", this.getHome.bind(this));
+    frontend.app.get("/requestLogin", this.getRequestLogin.bind(this));
+    frontend.app.get("/student/:id", this.getStudentId.bind(this));
+
+    frontend.app.get("/settings", this.getSettings.bind(this));
     frontend.app.get("/sessions", this.getSessions.bind(this));
 
   }
@@ -56,6 +60,64 @@ class Endpoints {
     res.send("hiya");
 
     // Now that redirection is checked we can continue on with our homepage.
+  }
+
+  async getRequestLogin(req, res) {
+    // Since this is the failed login page and has no access to resources,
+    // we will skip any user or access steps.
+    const template = await ejs.renderFile(
+      "./views/pages/requestLogin.ejs",
+      {
+        title: "Please Login"
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(200).send(template);
+  }
+
+  async getStudentId(req, res) {
+
+  }
+
+  async getSettings(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const redirection = this.shouldUserBeRedirected(user);
+
+    if (redirection.status) {
+      res.redirect(redirection.location);
+    }
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "view:config.*");
+    // We just check if they have any permissions at all to the config, and let
+    // EJS check config values specifically
+    if (!hasAccess) {
+      // Return permission error page
+      res.send("no access");
+    }
+
+    // Return settings page
+    const template = await ejs.renderFile(
+      "./views/pages/settings.ejs",
+      {
+        title: "Settings",
+        content: {
+          default: this.config.default,
+          schema: this.config.schema
+        },
+        config: this.config,
+        auth: this.server.auth
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(200).send(template);
   }
 
   async getSessions(req, res) {

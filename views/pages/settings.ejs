@@ -1,0 +1,24 @@
+<%- include("./fragments/header") %>
+  <div class="bulma-hero">
+    <div class="bulma-hero-body">
+      <div class="bulma-container">
+        <div class="bulma-card">
+          <div class="bulma-card-header">
+            <p class="bulma-card-header-title bulma-is-centered bulma-is-size-1">
+              Settings
+            </p>
+          </div>
+          <div class="bulma-card-content">
+            <div class="bulma-content">
+
+              <% for (const key in content.schema) { %>
+                <%- include("./fragments/settings-item", { configGet: key, key: key, size: 2, content: { schema: content.schema[key] }}); %>
+              <% } %>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<%- include("./fragments/footer"); %>

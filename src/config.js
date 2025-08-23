@@ -4,6 +4,7 @@ const yaml = require("js-yaml");
 const keyPathHelpers = require("key-path-helpers");
 
 const defaultConfig = require("./config.default.js");
+const configSchema = require("./config.schema.js");
 
 const VALID_CONFIG_FILENAMES = [ "app.yaml", "app.json" ];
 
@@ -14,6 +15,8 @@ class Config {
     this.settings = {};
     this.configFileLocation = null;
 
+    this.default = defaultConfig;
+    this.schema = configSchema;
     this.log = log;
 
     this.initialize();
@@ -80,9 +83,10 @@ class Config {
   }
 
   get(keyPath) {
+    console.log(keyPath);
     let value =
       keyPathHelpers.getValueAtKeyPath(this.settings, keyPath) ??
-      keyPathHelpers.getValueAtKeyPath(defaultConfig, keyPath) ??
+      keyPathHelpers.getValueAtKeyPath(this.default, keyPath) ??
       process.env[keyPath] ??
       null;
     return value;
