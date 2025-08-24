@@ -1,36 +1,65 @@
 <% if (content.schema.type === "object") { %>
-  <p class="bulma-is-size-<%= size %>">
-    <%= key %>
-  </p>
-  <% for (const innerKey in content.schema.properties) { %>
-    <%- include("./fragments/settings-item", { configGet: `${configGet}.${innerKey}`, key: innerKey, size: size-1, content: { schema: content.schema.properties[innerKey] }}); %>
+  <% if (canPreformAction(`view:config.${configGet}`)) { %>
+    <p class="bulma-is-size-<%= size %>">
+      <%= content.schema.title ?? uncamelcase(key) %>
+    </p>
+    <% for (const innerKey in content.schema.properties) { %>
+      <%- include("./fragments/settings-item", { configGet: `${configGet}.${innerKey}`, key: innerKey, size: size+1, content: { schema: content.schema.properties[innerKey] }}); %>
+    <% } %>
   <% } %>
 <% } else if (content.schema.type === "array") { %>
-  <% for (const item in content.schema.items) { %>
-
-  <% } %>
-<% } else if (content.schema.type === "number" || content.schema.type === "string") { %>
-  <div class="bulma-field">
-    <label class="bulma-label">
-      <%= key %>
-    </label>
-    <div class="bulma-control">
-      <input
-        class="bulma-input"
-        type=<% if (content.schema.type === "string") { %> "text" <% } else if (content.schema.type === "number") { %> "number" <% } %>
-        value="<%= config.get(`${configGet}`); %>"
-      >
+  <div class="bulma-box">
+    <p class="bulma-is-size-<%= size %>">
+      <%= content.schema.title ?? uncamelcase(key) %>
+    </p>
+    <% if (typeof content.schema.description === "string") { %>
       <p class="bulma-help"><%= content.schema.description %></p>
-    </div>
+    <% } %>
+    <% for (let i = 0; i < config.get(`${configGet}`)?.length; i++) { %>
+      <%- include("./fragments/settings-item", { configGet: `${configGet}.${i}`, key: "", size: size+1, content: { schema: content.schema.items }}); %>
+    <% } %>
+    <% if (canPreformAction(`edit:config.${configGet}`)) { %>
+      <%# Below is used to allow new values to be entered into an array. %>
+      <%# TODO Figure out to allow a btn to add more of these entries %>
+      <%- include("./fragments/settings-item", { configGet: `empty`, key: "", size: size+1, content: { schema: content.schema.items }}); %>
+    <% } %>
   </div>
-<% } else if (content.schema.type === "boolean") { %>
-  <div class="bulma-field">
-    <div class="bulma-control">
-      <label class="bulma-checkbox">
-        <input type="checkbox" <% if (config.get(`${configGet}`)) { %>checked<%}%>>
-        <%= key %>
-        <p class="bulma-help"><%= content.schema.description %></p>
+<% } else if (content.schema.type === "number" || content.schema.type === "string") { %>
+  <% if (canPreformAction(`view:config.${configGet}`)) { %>
+    <div class="bulma-field">
+      <label class="bulma-label">
+        <%= content.schema.title ?? uncamelcase(key) %>
       </label>
+      <div class="bulma-control">
+        <input
+          class="bulma-input"
+          type=<% if (content.schema.type === "string") { %> "text" <% } else if (content.schema.type === "number") { %> "number" <% } %>
+          value="<%= config.get(`${configGet}`); %>"
+          placeholder="<%= content.schema.default ?? content.schema.example %>"
+          <% if(!canPreformAction(`edit:config.${configGet}`)) {%>disabled<% } %>
+        >
+        <% if (typeof content.schema.description === "string") { %>
+          <p class="bulma-help"><%= content.schema.description %></p>
+        <% } %>
+      </div>
     </div>
-  </div>
+  <% } %>
+<% } else if (content.schema.type === "boolean") { %>
+  <% if (canPreformAction(`view:config.${configGet}`)) { %>
+    <div class="bulma-field">
+      <div class="bulma-control">
+        <label class="bulma-checkbox">
+          <input
+            type="checkbox"
+            <% if (config.get(`${configGet}`)) { %>checked<%}%>
+            <% if (!canPreformAction(`edit:config.${configGet}`)) { %>disabled<% } %>
+          >
+          <%= content.schema.title ?? uncamelcase(key) %>
+          <% if (typeof content.schema.description === "string") { %>
+            <p class="bulma-help"><%= content.schema.description %></p>
+          <% } %>
+        </label>
+      </div>
+    </div>
+  <% } %>
 <% } %>

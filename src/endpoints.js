@@ -4,6 +4,7 @@
 
 const path = require("node:path");
 const ejs = require("ejs");
+const utils = require("./utils.js");
 
 module.exports =
 class Endpoints {
@@ -25,6 +26,7 @@ class Endpoints {
     frontend.app.get("/student/:id", this.getStudentId.bind(this));
 
     frontend.app.get("/settings", this.getSettings.bind(this));
+    frontend.app.post("/settings", this.postSettings.bind(this));
     frontend.app.get("/sessions", this.getSessions.bind(this));
 
   }
@@ -109,7 +111,8 @@ class Endpoints {
           schema: this.config.schema
         },
         config: this.config,
-        auth: this.server.auth
+        canPreformAction: (permission) => { return this.server.auth.canUserPreformAction(user, permission); },
+        uncamelcase: utils.uncamelcase
       },
       {
         views: [path.resolve("./views")]
@@ -118,6 +121,10 @@ class Endpoints {
 
     res.set("Content-Type", "text/html");
     res.status(200).send(template);
+  }
+
+  async postSettings(req, res) {
+    console.log(req.body);
   }
 
   async getSessions(req, res) {

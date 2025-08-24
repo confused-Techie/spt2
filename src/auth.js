@@ -2,7 +2,10 @@
   Assists in determining the permissions of a user and if they are authenticated.
 */
 
-const RE_PERMISSION = /^(?<action>[a-z*]+):(?<namespace>[a-z*]+).(?<resource>[a-z*]+)$/;
+const RE_PERMISSION = /^(?<action>[a-z*]+):(?<namespace>[a-z*]+).(?<resource>[a-z*]+)/;
+// ^^ We stopped matching until end of line so that we can accept overly specific
+// permissions requests. This made life easy for the settings page. But realistically
+// will still acomplish the same thing
 
 module.exports =
 class Auth {

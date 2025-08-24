@@ -5,6 +5,7 @@
 module.exports = {
   server: {
     port: 8080,
+    dev: false,
     allowNegativePoints: false,
     paginationLimit: 30
   },

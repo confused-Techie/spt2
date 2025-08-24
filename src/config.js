@@ -83,7 +83,6 @@ class Config {
   }
 
   get(keyPath) {
-    console.log(keyPath);
     let value =
       keyPathHelpers.getValueAtKeyPath(this.settings, keyPath) ??
       keyPathHelpers.getValueAtKeyPath(this.default, keyPath) ??
