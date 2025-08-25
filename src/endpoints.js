@@ -24,10 +24,11 @@ class Endpoints {
     frontend.app.get("/", this.getHome.bind(this));
     frontend.app.get("/requestLogin", this.getRequestLogin.bind(this));
     frontend.app.get("/student/:id", this.getStudentId.bind(this));
-    
+
     frontend.app.get("/settings", this.getSettings.bind(this));
     frontend.app.post("/settings", this.postSettings.bind(this));
     frontend.app.get("/sessions", this.getSessions.bind(this));
+    frontend.app.get("/logs", this.getLogs.bind(this));
 
     // === API ===
     frontend.app.delete("/api/notification/:id", this.deleteApiNotificationId.bind(this));
@@ -154,7 +155,10 @@ class Endpoints {
 
     for (const setting in settings) {
       if (this.config.get(setting) !== settings[setting]) {
-        this.config.set(setting, settings[setting]);
+        const hasSpecificAccess = this.server.auth.canUserPreformAction(user, `edit:config.${setting}`);
+        if (hasSpecificAccess) {
+          this.config.set(setting, settings[setting]);
+        }
       }
     }
     // TODO Unchecked boxes aren't sent as form data. How can we check those against
@@ -191,6 +195,41 @@ class Endpoints {
         title: "Sessions",
         content: {
           sessions: sessions
+        },
+        notifications: notifications
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(200).send(template);
+  }
+
+  async getLogs(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const redirection = this.shouldUserBeRedirected(user);
+
+    if (redirection.status) {
+      res.redirect(redirection.location);
+    }
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "view:log.*");
+
+    if (!hasAccess) {
+      // Return generic error page about permissions
+      res.send("no access");
+    }
+
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
+
+    const template = await ejs.renderFile(
+      "./views/pages/logs.ejs",
+      {
+        title: "Logs",
+        content: {
+          logs: this.log.cache
         },
         notifications: notifications
       },

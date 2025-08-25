@@ -1,20 +1,37 @@
 <%- include("./fragments/header"); %>
-  <div class="bulma-container">
-    <table class="bulma-table">
-      <thead>
-        <tr>
-          <th>User</th>
-          <th>Last Online</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% for (const session of content.sessions) { %>
-          <tr>
-            <td><%=session.passport.user.email%></td>
-            <td><%=session.__lastAccess%></td>
-          </tr>
-        <% } %>
-      </tbody>
-    </table>
+  <div class="bulma-hero">
+    <div class="bulma-hero-body">
+      <div class="bulma-container">
+        <div class="bulma-card">
+          <div class="bulma-card-header">
+            <p class="bulma-card-header-title bulma-is-centered bulma-is-size-1">
+              Sessions
+            </p>
+          </div>
+          <div class="bulma-card-content">
+            <div class="bulma-content">
+
+              <table class="bulma-table bulma-is-hoverable bulma-is-fullwidth">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Last Online</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% for (const session of content.sessions) { %>
+                    <tr>
+                      <td><%=session.passport.user.email%></td>
+                      <td><%=session.__lastAccess%></td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 <%- include("./fragments/footer"); %>
