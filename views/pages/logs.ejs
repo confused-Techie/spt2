@@ -1,83 +1,64 @@
 <%- include("./fragments/header"); %>
-  <div class="bulma-hero">
-    <div class="bulma-hero-body">
-      <div class="bulma-container">
-        <div class="bulma-card">
-          <div class="bulma-card-header">
-            <p class="bulma-card-header-title bulma-is-centered bulma-is-size-1">
-              Logs
-            </p>
-          </div>
-          <div class="bulma-card-content">
-            <div class="bulma-content">
+  <table class="bulma-table bulma-is-hoverable bulma-is-fullwidth">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Level</th>
+        <th>Short Message</th>
+        <th>Host</th>
+        <th><%# More Button Placeholder %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% for (const log of content.logs) { %>
+        <% if (log.level === 0 || log.level === 1 || log.level === 2) { %>
+          <tr class="bulma-is-danger">
+        <% } else if (log.level === 3 || log.level === 4) { %>
+          <tr class="bulma-is-warning">
+        <% } else if (log.level === 5 || log.level === 6) { %>
+          <tr class="bulma-is-info">
+        <% } else { %>
+          <tr>
+        <% } %>
+        <td>
+          <% const date = new Date(log.timestamp); %>
+          <time datetime="<%= date.toISOString() %>">
+            <%= date.toLocaleString() %>
+          </time>
+        </td>
+        <td><%= log._level_string %> (<%= log.level %>)</td>
+        <td><%= log.short_message %></td>
+        <td><%= log.host %></td>
+        <td>
+          <button
+            class="bulma-button bulma-is-link"
+            onclick="document.getElementById('modal-<%= log.timestamp %>').classList.toggle('bulma-is-active')"
+          >
+            More Details
+          </button>
+        </td>
+      </tr>
+    <% } %>
+  </tbody>
+</table>
 
-              <table class="bulma-table bulma-is-hoverable bulma-is-fullwidth">
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Level</th>
-                    <th>Short Message</th>
-                    <th>Host</th>
-                    <th><%# More Button Placeholder %></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% for (const log of content.logs) { %>
-                    <% if (log.level === 0 || log.level === 1 || log.level === 2) { %>
-                      <tr class="bulma-is-danger">
-                    <% } else if (log.level === 3 || log.level === 4) { %>
-                      <tr class="bulma-is-warning">
-                    <% } else if (log.level === 5 || log.level === 6) { %>
-                      <tr class="bulma-is-info">
-                    <% } else { %>
-                      <tr>
-                    <% } %>
-                      <td>
-                        <% const date = new Date(log.timestamp); %>
-                        <time datetime="<%= date.toISOString() %>">
-                          <%= date.toLocaleString() %>
-                        </time>
-                      </td>
-                      <td><%= log._level_string %> (<%= log.level %>)</td>
-                      <td><%= log.short_message %></td>
-                      <td><%= log.host %></td>
-                      <td>
-                        <button
-                          class="bulma-button bulma-is-link"
-                          onclick="document.getElementById('modal-<%= log.timestamp %>').classList.toggle('bulma-is-active')"
-                        >
-                          More Details
-                        </button>
-                      </td>
-                    </tr>
-                  <% } %>
-                </tbody>
-              </table>
-
-              <%# Iterate the table again to generate all the modals containing more details %>
-              <% for (const log of content.logs) { %>
-                <div class="bulma-modal" id="modal-<%= log.timestamp %>">
-                  <div class="bulma-modal-background"></div>
-                  <div class="bulma-modal-content">
-                    <div class="bulma-box">
-                    <pre>
+<%# Iterate the table again to generate all the modals containing more details %>
+<% for (const log of content.logs) { %>
+  <div class="bulma-modal" id="modal-<%= log.timestamp %>">
+    <div class="bulma-modal-background"></div>
+      <div class="bulma-modal-content">
+        <div class="bulma-box">
+          <pre>
 <%= JSON.stringify(log, null, 2) %>
 <%# Bring this to the start to avoid erronous whitespace at start of JSON output %>
-                    </pre>
-                    </div>
-                  </div>
-                  <button
-                    class="bulma-modal-close bulma-is-large"
-                    aria-label="close"
-                    onclick="document.getElementById('modal-<%= log.timestamp %>').classList.toggle('bulma-is-active')"
-                  ></button>
-                </div>
-              <% } %>
-
-            </div>
-          </div>
+          </pre>
         </div>
       </div>
+      <button
+        class="bulma-modal-close bulma-is-large"
+        aria-label="close"
+        onclick="document.getElementById('modal-<%= log.timestamp %>').classList.toggle('bulma-is-active')"
+      ></button>
     </div>
-  </div>
+<% } %>
 <%- include("./fragments/footer"); %>

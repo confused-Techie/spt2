@@ -1,31 +1,13 @@
 <%- include("./fragments/header") %>
-  <div class="bulma-hero">
-    <div class="bulma-hero-body">
-      <div class="bulma-container">
-        <div class="bulma-card">
-          <div class="bulma-card-header">
-            <p class="bulma-card-header-title bulma-is-centered bulma-is-size-1">
-              Settings
-            </p>
-          </div>
-          <div class="bulma-card-content">
-            <div class="bulma-content">
-              <form method="post" name="settings" action="/settings">
-                <% for (const key in content.schema) { %>
-                  <%- include("./fragments/settings-item", { configGet: key, key: key, size: 1, content: { schema: content.schema[key] }}); %>
-                <% } %>
+  <form method="post" name="settings" action="/settings">
+    <% for (const key in content.schema) { %>
+      <%- include("./fragments/settings-item", { configGet: key, key: key, size: 1, content: { schema: content.schema[key] }}); %>
+    <% } %>
 
-                <div class="bulma-field">
-                  <div class="bulma-control">
-                    <button class="bulma-button bulma-is-link" type="submit">Submit</button>
-                  </div>
-                </div>
-              </form>
-
-            </div>
-          </div>
-        </div>
+    <div class="bulma-field">
+      <div class="bulma-control">
+        <button class="bulma-button bulma-is-link" type="submit">Submit</button>
       </div>
     </div>
-  </div>
+  </form>
 <%- include("./fragments/footer"); %>
