@@ -29,6 +29,7 @@ class Endpoints {
     frontend.app.post("/settings", this.postSettings.bind(this));
     frontend.app.get("/sessions", this.getSessions.bind(this));
     frontend.app.get("/logs", this.getLogs.bind(this));
+    frontend.app.get("/accessDenied", this.getAccessDenied.bind(this));
 
     // === API ===
     frontend.app.delete("/api/notification/:id", this.deleteApiNotificationId.bind(this));
@@ -107,8 +108,7 @@ class Endpoints {
     // We just check if they have any permissions at all to the config, and let
     // EJS check config values specifically
     if (!hasAccess) {
-      // Return permission error page
-      res.send("no access");
+      res.status(303).redirect("/accessDenied");
     }
 
     const notifications = this.server.notifications.getNotificationsForUser(user.email);
@@ -147,8 +147,7 @@ class Endpoints {
     const hasAccess = this.server.auth.canUserPreformAction(user, "edit:config.*");
 
     if (!hasAccess) {
-      // Return generic error page about permissions
-      res.send("no access");
+      res.status(303).redirect("/accessDenied");
     }
 
     const settings = req.body;
@@ -166,7 +165,7 @@ class Endpoints {
 
     this.server.notifications.addNotification("Successfully updated settings", "success", user.email);
 
-    res.status(301).redirect("/settings");
+    res.status(303).redirect("/settings");
   }
 
   async getSessions(req, res) {
@@ -180,8 +179,7 @@ class Endpoints {
     const hasAccess = this.server.auth.canUserPreformAction(user, "view:frontend.sessions");
 
     if (!hasAccess) {
-      // Return generic error page about permissions
-      res.send("no access");
+      res.status(303).redirect("/accessDenied");
     }
 
     const notifications = this.server.notifications.getNotificationsForUser(user.email);
@@ -218,8 +216,7 @@ class Endpoints {
     const hasAccess = this.server.auth.canUserPreformAction(user, "view:log.*");
 
     if (!hasAccess) {
-      // Return generic error page about permissions
-      res.send("no access");
+      res.status(303).redirect("/accessDenied");
     }
 
     const notifications = this.server.notifications.getNotificationsForUser(user.email);
@@ -266,6 +263,23 @@ class Endpoints {
       });
       res.status(500).send();
     }
+  }
+
+  async getAccessDenied(req, res) {
+    // Skip all other checks
+    const template = await ejs.renderFile(
+      "./views/pages/accessDenied.ejs",
+      {
+        title: "Access Denied",
+        notifications: []
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(403).send(template);
   }
 
 }
