@@ -24,10 +24,18 @@ class Endpoints {
     frontend.app.get("/", this.getHome.bind(this));
     frontend.app.get("/requestLogin", this.getRequestLogin.bind(this));
     frontend.app.get("/student/:id", this.getStudentId.bind(this));
-
+    
     frontend.app.get("/settings", this.getSettings.bind(this));
     frontend.app.post("/settings", this.postSettings.bind(this));
     frontend.app.get("/sessions", this.getSessions.bind(this));
+
+    // === API ===
+    frontend.app.delete("/api/notification/:id", this.deleteApiNotificationId.bind(this));
+
+    // === Resources ===
+    frontend.app.get("/resources/site.js", (req, res) => {
+      res.sendFile(path.resolve("./static/site.js"));
+    });
 
   }
 
@@ -70,7 +78,8 @@ class Endpoints {
     const template = await ejs.renderFile(
       "./views/pages/requestLogin.ejs",
       {
-        title: "Please Login"
+        title: "Please Login",
+        notifications: []
       },
       {
         views: [path.resolve("./views")]
@@ -101,6 +110,8 @@ class Endpoints {
       res.send("no access");
     }
 
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
+
     // Return settings page
     const template = await ejs.renderFile(
       "./views/pages/settings.ejs",
@@ -112,7 +123,8 @@ class Endpoints {
         },
         config: this.config,
         canPreformAction: (permission) => { return this.server.auth.canUserPreformAction(user, permission); },
-        uncamelcase: utils.uncamelcase
+        uncamelcase: utils.uncamelcase,
+        notifications: notifications
       },
       {
         views: [path.resolve("./views")]
@@ -124,7 +136,33 @@ class Endpoints {
   }
 
   async postSettings(req, res) {
-    console.log(req.body);
+    const user = this.server.auth.getUserFromRequest(req);
+    const redirection = this.shouldUserBeRedirected(user);
+
+    if (redirection.status) {
+      res.redirect(redirection.location);
+    }
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "edit:config.*");
+
+    if (!hasAccess) {
+      // Return generic error page about permissions
+      res.send("no access");
+    }
+
+    const settings = req.body;
+
+    for (const setting in settings) {
+      if (this.config.get(setting) !== settings[setting]) {
+        this.config.set(setting, settings[setting]);
+      }
+    }
+    // TODO Unchecked boxes aren't sent as form data. How can we check those against
+    // what the user has access to change to know if we need to change their setting?
+
+    this.server.notifications.addNotification("Successfully updated settings", "success", user.email);
+
+    res.status(301).redirect("/settings");
   }
 
   async getSessions(req, res) {
@@ -142,6 +180,8 @@ class Endpoints {
       res.send("no access");
     }
 
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
+
     // Return page about active sessions
     const sessions = await this.server.frontend.getActiveSessions();
 
@@ -151,7 +191,8 @@ class Endpoints {
         title: "Sessions",
         content: {
           sessions: sessions
-        }
+        },
+        notifications: notifications
       },
       {
         views: [path.resolve("./views")]
@@ -161,4 +202,31 @@ class Endpoints {
     res.set("Content-Type", "text/html");
     res.status(200).send(template);
   }
+
+  async deleteApiNotificationId(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const notificationId = req.params.id;
+
+    try {
+      const result = this.server.notifications.deleteNotification(notificationId, user.email);
+
+      if (result.ok) {
+        res.status(200).send();
+      } else {
+        if (result.code === 404) {
+          res.status(404).send();
+        } else {
+          res.status(500).send();
+        }
+      }
+    } catch(err) {
+      this.log.err({
+        host: "endpoints",
+        short_message: `Unable to delete notification '${notificationId}'.`,
+        _err: err
+      });
+      res.status(500).send();
+    }
+  }
+
 }

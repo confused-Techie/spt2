@@ -3,6 +3,7 @@ const Task = require("./task.js");
 const Endpoints = require("./endpoints.js");
 const Auth = require("./auth.js");
 const Database = require("./database.js");
+const Notifications = require("./notifications.js");
 
 module.exports =
 class Server {
@@ -10,6 +11,7 @@ class Server {
     this.config = config;
     this.log = log;
 
+    this.notifications = new Notifications(this);
     this.frontend = new Frontend(this);
     this.task = new Task(this);
     this.endpoints = new Endpoints(this);

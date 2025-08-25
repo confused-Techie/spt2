@@ -10,9 +10,9 @@
           </div>
           <div class="bulma-card-content">
             <div class="bulma-content">
-              <form action="/settings" method="post">
+              <form method="post" name="settings" action="/settings">
                 <% for (const key in content.schema) { %>
-                  <%- include("./fragments/settings-item", { configGet: key, key: key, size: 2, content: { schema: content.schema[key] }}); %>
+                  <%- include("./fragments/settings-item", { configGet: key, key: key, size: 1, content: { schema: content.schema[key] }}); %>
                 <% } %>
 
                 <div class="bulma-field">
@@ -20,7 +20,7 @@
                     <button class="bulma-button bulma-is-link" type="submit">Submit</button>
                   </div>
                 </div>
-              </div>
+              </form>
 
             </div>
           </div>

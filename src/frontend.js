@@ -27,6 +27,13 @@ class Frontend {
 
     // Basic setup
     this.app.use(compression());
+    this.app.use(express.urlencoded({
+      type: "application/x-www-form-urlencoded",
+      extended: true,
+      inflate: true,
+      limit: "1mb",
+      parameterLimit: 5000
+    }));
 
     if (this.server.config.get("authentication.enableAuthentication")) {
 

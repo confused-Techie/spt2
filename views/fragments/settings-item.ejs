@@ -1,6 +1,6 @@
 <% if (content.schema.type === "object") { %>
   <% if (canPreformAction(`view:config.${configGet}`)) { %>
-    <p class="bulma-is-size-<%= size %>">
+    <p class="bulma-has-text-weight-bold bulma-is-size-<%= size %>">
       <%= content.schema.title ?? uncamelcase(key) %>
     </p>
     <% for (const innerKey in content.schema.properties) { %>
@@ -27,7 +27,7 @@
 <% } else if (content.schema.type === "number" || content.schema.type === "string") { %>
   <% if (canPreformAction(`view:config.${configGet}`)) { %>
     <div class="bulma-field">
-      <label class="bulma-label">
+      <label class="bulma-label" for="<%= configGet %>">
         <%= content.schema.title ?? uncamelcase(key) %>
       </label>
       <div class="bulma-control">
@@ -36,6 +36,7 @@
           type=<% if (content.schema.type === "string") { %> "text" <% } else if (content.schema.type === "number") { %> "number" <% } %>
           value="<%= config.get(`${configGet}`); %>"
           placeholder="<%= content.schema.default ?? content.schema.example %>"
+          name="<%= configGet %>"
           <% if(!canPreformAction(`edit:config.${configGet}`)) {%>disabled<% } %>
         >
         <% if (typeof content.schema.description === "string") { %>
@@ -48,9 +49,10 @@
   <% if (canPreformAction(`view:config.${configGet}`)) { %>
     <div class="bulma-field">
       <div class="bulma-control">
-        <label class="bulma-checkbox">
+        <label class="bulma-checkbox" for="<%= configGet %>">
           <input
             type="checkbox"
+            name="<%= configGet %>"
             <% if (config.get(`${configGet}`)) { %>checked<%}%>
             <% if (!canPreformAction(`edit:config.${configGet}`)) { %>disabled<% } %>
           >

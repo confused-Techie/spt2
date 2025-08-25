@@ -31,3 +31,16 @@
         </div>
       </div>
     </nav>
+
+    <% for (const notification of notifications) { %>
+      <div
+        class="
+          bulma-notification
+          <% if (notification.status === "success") { %> bulma-is-success <% } %>
+        "
+        data-id="<%= notification.id %>"
+      >
+        <button class="bulma-delete"></button>
+        <%= notification.msg %>
+      </div>
+    <% } %>

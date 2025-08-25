@@ -96,6 +96,11 @@ class Config {
     // errors and values that match the default
     keyPathHelpers.setValueAtKeyPath(this.settings, keyPath, value);
     // TODO Maybe attempt to validate key values?
+    // TODO updating settings via the website will return 'on' and 'off' for booleans.
+    // Plus will convert numbers into strings. We should use the schema to validate
+    // what type the setting should be, and attempt to figure out any modifications
+    // from there.
+    
     // Now write back changes to disk
 
     const configFileExt = path.parse(this.configFileLocation).ext;
