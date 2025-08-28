@@ -31,8 +31,8 @@ class Server {
   }
 
   async start() {
+    await this.database.start();
     await this.task.start();
-    this.database.start();
     await this.frontend.listen();
   }
 

@@ -1,0 +1,47 @@
+<%- include("./fragments/header"); %>
+  <div class="bulma-card">
+    <div class="bulma-card-content">
+      <div class="bulma-content">
+        <ul>
+          <li>Student ID: <%= content.student.student_id %></li>
+          <li>First Name: <%= content.student.first_name %></li>
+          <li>Last Name: <%= content.student.last_name %></li>
+          <li>Created: <%= content.student.created %></li>
+          <li>Enabled: <%= content.student.enabled %></li>
+          <li>Points: <%= content.student.points %></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <table class="bulma-table bulma-is-hoverable bulma-is-fullwidth">
+    <thead>
+      <tr>
+        <th>Point ID</th>
+        <th>Points Modified</th>
+        <th>Points Action</th>
+        <th>Reason</th>
+        <th>Created</th>
+        <th>Points Before</th>
+        <th>Points After</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% for (const point of content.points) { %>
+        <tr>
+          <td><%= point.point_id %></td>
+          <td><%= point.points_modified %></td>
+          <td><%= point.points_action %></td>
+          <td><%= point.reason %></td>
+          <td>
+            <% const date = new Date(point.created); %>
+            <time datetime="<%= date.toISOString() %>">
+              <%= date.toLocaleString() %>
+            </time>
+          </td>
+          <td><%= point.total_points_before %></td>
+          <td><%= point.total_points_after %></td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+<%- include("./fragments/footer"); %>

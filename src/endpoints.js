@@ -18,18 +18,28 @@ class Endpoints {
     // This function is added to `frontend.endpointSetupFuncs` array, and is
     // called to setup all endpoints contained within this class.
 
+    // === Built-In ===
     // GET:/oauth2/redirect - Setup for auth, callback for google login
     // GET:/login - Setup for auth, default login prompt
     // GET:/requestLogin - Setup for auth, failed login redirect (reconsider?) TODO
-    frontend.app.get("/", this.getHome.bind(this));
-    frontend.app.get("/requestLogin", this.getRequestLogin.bind(this));
-    frontend.app.get("/student/:id", this.getStudentId.bind(this));
 
+    // === Frontend: Main ===
+    frontend.app.get("/", this.getHome.bind(this));
+    frontend.app.get("/students", this.getStudents.bind(this));
+    frontend.app.get("/students/:id", this.getStudentsId.bind(this));
+    frontend.app.get("/points", this.getPoints.bind(this));
+
+    // === Frontend: Util ===
+    frontend.app.get("/requestLogin", this.getRequestLogin.bind(this));
     frontend.app.get("/settings", this.getSettings.bind(this));
     frontend.app.post("/settings", this.postSettings.bind(this));
     frontend.app.get("/sessions", this.getSessions.bind(this));
     frontend.app.get("/logs", this.getLogs.bind(this));
-    frontend.app.get("/accessDenied", this.getAccessDenied.bind(this));
+
+    // === Codes ===
+    frontend.app.get("/codes/403", this.getCodes403.bind(this));
+    frontend.app.get("/codes/404", this.getCodes404.bind(this));
+    frontend.app.get("/codes/500", this.getCodes500.bind(this));
 
     // === API ===
     frontend.app.delete("/api/notification/:id", this.deleteApiNotificationId.bind(this));
@@ -92,7 +102,126 @@ class Endpoints {
     res.status(200).send(template);
   }
 
-  async getStudentId(req, res) {
+  async getStudentsId(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const redirection = this.shouldUserBeRedirected(user);
+
+    if (redirection.status) {
+      res.redirect(redirection.location);
+    }
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "view:database.students");
+
+    if (!hasAccess) {
+      res.status(303).redirect("/codes/403");
+    }
+
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
+
+    try {
+      const studentId = req.params.id; // TODO Validation?
+      const student = await this.server.database.getStudentByID(studentId);
+      const studentPoints = await this.server.database.getPointsByStudentID(studentId);
+
+      if (!student.ok) {
+        if (student.code === 404) {
+          res.status(303).redirect("/codes/404");
+        } else {
+          res.status(303).redirect("/codes/500");
+        }
+      } else {
+        if (!studentPoints.ok && studentPoints.code !== 404) {
+          // We only check for the points failing if it's NOT not found, because
+          // a student may not have any points
+          res.status(303).redirect("/codes/500");
+        } else {
+          // Everything succeeded as expected, but still check for a bad student points
+          const template = await ejs.renderFile(
+            "./views/pages/studentsId.ejs",
+            {
+              title: `${student.content.last_name}, ${student.content.first_name}`,
+              content: {
+                student: student.content,
+                points: studentPoints.ok ? studentPoints.content : []
+              },
+              notifications: notifications
+            },
+            {
+              views: [path.resolve("./views")]
+            }
+          );
+          res.set("Content-Type", "text/html");
+          res.status(200).send(template);
+        }
+      }
+    } catch(err) {
+      this.log.crit({
+        host: "endpoints",
+        short_message: "An error in the db caused a page to crash",
+        _err: err,
+        _page: "/students/:id"
+      });
+      res.status(303).redirect("/codes/500");
+    }
+  }
+
+  async getStudents(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const redirection = this.shouldUserBeRedirected(user);
+
+    if (redirection.status) {
+      res.redirect(redirection.location);
+    }
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "view:database.students");
+
+    if (!hasAccess) {
+      res.status(303).redirect("/codes/403");
+    }
+
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
+
+    try {
+      const students = await this.server.database.getAllStudents();
+
+      if (!students.ok) {
+        if (students.code === 404) {
+          res.status(303).redirect("/codes/404");
+        } else {
+          res.status(303).redirect("/codes/500");
+        }
+      } else {
+        const template = await ejs.renderFile(
+          "./views/pages/students.ejs",
+          {
+            title: "Students",
+            content: {
+              students: students.content
+            },
+            notifications: notifications
+          },
+          {
+            views: [path.resolve("./views")]
+          }
+        );
+
+        res.set("Content-Type", "text/html");
+        res.status(200).send(template);
+      }
+
+    } catch(err) {
+      this.log.crit({
+        host: "endpoints",
+        short_message: "An error in 'database.getAllStudents' cased a page to crash",
+        _err: err,
+        _page: "/students"
+      });
+
+      res.status(303).redirect("/codes/500");
+    }
+  }
+
+  async getPoints(req, res) {
 
   }
 
@@ -108,7 +237,7 @@ class Endpoints {
     // We just check if they have any permissions at all to the config, and let
     // EJS check config values specifically
     if (!hasAccess) {
-      res.status(303).redirect("/accessDenied");
+      res.status(303).redirect("/codes/403");
     }
 
     const notifications = this.server.notifications.getNotificationsForUser(user.email);
@@ -147,7 +276,7 @@ class Endpoints {
     const hasAccess = this.server.auth.canUserPreformAction(user, "edit:config.*");
 
     if (!hasAccess) {
-      res.status(303).redirect("/accessDenied");
+      res.status(303).redirect("/codes/403");
     }
 
     const settings = req.body;
@@ -179,13 +308,14 @@ class Endpoints {
     const hasAccess = this.server.auth.canUserPreformAction(user, "view:frontend.sessions");
 
     if (!hasAccess) {
-      res.status(303).redirect("/accessDenied");
+      res.status(303).redirect("/codes/403");
     }
 
     const notifications = this.server.notifications.getNotificationsForUser(user.email);
 
     // Return page about active sessions
     const sessions = await this.server.frontend.getActiveSessions();
+    console.log(sessions);
 
     const template = await ejs.renderFile(
       "./views/pages/sessions.ejs",
@@ -216,7 +346,7 @@ class Endpoints {
     const hasAccess = this.server.auth.canUserPreformAction(user, "view:log.*");
 
     if (!hasAccess) {
-      res.status(303).redirect("/accessDenied");
+      res.status(303).redirect("/codes/403");
     }
 
     const notifications = this.server.notifications.getNotificationsForUser(user.email);
@@ -265,10 +395,11 @@ class Endpoints {
     }
   }
 
-  async getAccessDenied(req, res) {
+  // === Code Returns ===
+  async getCodes403(req, res) {
     // Skip all other checks
     const template = await ejs.renderFile(
-      "./views/pages/accessDenied.ejs",
+      "./views/codes/403.ejs",
       {
         title: "Access Denied",
         notifications: []
@@ -280,6 +411,40 @@ class Endpoints {
 
     res.set("Content-Type", "text/html");
     res.status(403).send(template);
+  }
+
+  async getCodes404(req, res) {
+    // Skip all other checks
+    const template = await ejs.renderFile(
+      "./views/codes/404.ejs",
+      {
+        title: "Access Denied",
+        notifications: []
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(404).send(template);
+  }
+
+  async getCodes500(req, res) {
+    // Skip all other checks
+    const template = await ejs.renderFile(
+      "./views/codes/500.ejs",
+      {
+        title: "Server Error",
+        notifications: []
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(500).send(template);
   }
 
 }

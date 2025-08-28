@@ -9,7 +9,7 @@
     <tbody>
       <% for (const session of content.sessions) { %>
         <tr>
-          <td><%=session.passport.user.email%></td>
+          <td><%=session.passport?.user?.email ?? "unknown"%></td>
           <td><%=session.__lastAccess%></td>
         </tr>
       <% } %>

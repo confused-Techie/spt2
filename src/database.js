@@ -44,14 +44,28 @@ class Database {
 
   async start() {
     const postgresOpts = {
-      host: this.config.get("database.host"),
-      username: this.config.get("database.user"),
-      database: this.config.get("database.database"),
-      port: this.config.get("database.port")
+      host: "",
+      username: "",
+      database: "",
+      port: ""
     };
 
-    if (!this.config.get("dev")) {
-      postgresOpts.password = this.config.get("database.pass");
+    if (this.config.get("server.dev")) {
+      const dbUrl = process.env.DATABASE_URL;
+      const dbUrlReg = /postgres:\/\/([\/\S]+)@([\/\S]+):(\d+)\/([\/\S]+)/;
+      const dbUrlParsed = dbUrlReg.exec(dbUrl);
+
+      postgresOpts.host = dbUrlParsed[2];
+      postgresOpts.username = dbUrlParsed[1];
+      postgresOpts.database = dbUrlParsed[4];
+      postgresOpts.port = parseInt(dbUrlParsed[3], 10);
+    } else {
+      // Production Mode
+      postgresOpts.host = this.config.get("database.host");
+      postgresOpts.username = this.config.get("database.username");
+      postgresOpts.database = this.config.get("database.database");
+      postgresOpts.port = this.config.get("database.port");
+      postgresOpts.password = this.config.get("database.password");
     }
 
     this.sql = postgres(postgresOpts);
@@ -66,26 +80,26 @@ class Database {
     // While tools exist to handle this, may be the simplest to just do these ourselves
     // Most tools seem to want to run via cli and all sorts of fancy business, but...
     try {
+      // But we MUST do one command at a time
+      await this.sql`CREATE EXTENSION pgcrypto;`;
       await this.sql`
-        CREATE EXTENSION pgcrypto;
-
         CREATE TABLE students (
-          student_id BIGINT NOT NULL PRIMARY KEY
+          student_id BIGINT NOT NULL PRIMARY KEY,
           first_name VARCHAR(128) NOT NULL,
           last_name VARCHAR(128) NOT NULL,
           created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
           enabled BOOLEAN NOT NULL DEFAULT TRUE,
           points BIGINT NOT NULL DEFAULT 0
         );
-
-        CREATE TYPE pointsAction AS ENUM('added', 'removed');
-
+      `;
+      await this.sql`CREATE TYPE pointsAction AS ENUM('added', 'removed');`;
+      await this.sql`
         CREATE TABLE points (
           point_id UUID DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
           student BIGINT NOT NULL REFERENCES students(student_id),
           points_modified BIGINT NOT NULL DEFAULT 0,
           points_action pointsAction NOT NULL,
-          created TIMESTAMP WIHT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
           total_points_before BIGINT NOT NULL,
           total_points_after BIGINT NOT NULL,
           reason text
@@ -215,7 +229,7 @@ class Database {
       : { ok: false, content: command, code: 500 };
   }
 
-  async getAllStudentIDs() {
+  async getAllStudents() {
     const command = await this.sql`
       SELECT *
       FROM students
@@ -237,7 +251,7 @@ class Database {
 
     return command.count !== 0
       ? { ok: true, content: command }
-      : { ok: false, content: `Student ${id} not found, or no points found.`, short: 404 };
+      : { ok: false, content: `Student ${id} not found, or no points found.`, code: 404 };
   }
 
   async getPointsByStudentIdByDate(id, date) {

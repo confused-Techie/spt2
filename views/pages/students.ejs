@@ -1,0 +1,29 @@
+<%- include("./fragments/header"); %>
+  <table class="bulma-table bulma-is-hoverable bulma-is-fullwidth">
+    <thead>
+      <tr>
+        <th>Student ID</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Points</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% for (const student of content.students) {%>
+        <tr>
+          <td><a href="/students/<%= student.student_id %>"><%= student.student_id %></a></td>
+          <td><%= student.first_name %></td>
+          <td><%= student.last_name %></td>
+          <td><%= student.points %></td>
+          <td>
+            <% const date = new Date(student.created); %>
+            <time datetime="<%= date.toISOString() %>">
+              <%= date.toLocaleString() %>
+            </time>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+<%- include("./fragments/footer"); %>

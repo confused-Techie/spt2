@@ -24,9 +24,21 @@ const Server = require("../src/server.js");
 
 const log = new Log();
 
+// Pre-emptively caputre all `console` output
+// But save instance of original `console.log`
+const origConsoleLog = console.log;
+
+console.log = (data) => {
+  log.info(data);
+};
+
+console.error = (data) => {
+  log.err(data);
+};
+
 // Add cli log method
 log.send.push((obj) => {
-  console.log(obj);
+  origConsoleLog(obj);
 });
 
 log.notice({
