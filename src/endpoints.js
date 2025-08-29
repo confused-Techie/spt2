@@ -81,9 +81,25 @@ class Endpoints {
       res.redirect(redirection.location);
     }
 
-    res.send("hiya");
+    // Nothing specific to check for access, so will serve the homepage to them
+    // and let the different aspects check for access
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
 
-    // Now that redirection is checked we can continue on with our homepage.
+    const template = await ejs.renderFile(
+      "./views/pages/home.ejs",
+      {
+        title: "Home",
+        content: {},
+        config: this.config,
+        canPreformAction: (permission) => { return this.server.auth.canUserPreformAction(user, permission); },
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(200).send(template);
   }
 
   async getStudents(req, res) {
