@@ -55,10 +55,17 @@ class Database {
       const dbUrlReg = /postgres:\/\/([\/\S]+)@([\/\S]+):(\d+)\/([\/\S]+)/;
       const dbUrlParsed = dbUrlReg.exec(dbUrl);
 
-      postgresOpts.host = dbUrlParsed[2];
-      postgresOpts.username = dbUrlParsed[1];
-      postgresOpts.database = dbUrlParsed[4];
-      postgresOpts.port = parseInt(dbUrlParsed[3], 10);
+      if (dbUrlParsed.length > 4) {
+        postgresOpts.host = dbUrlParsed[2];
+        postgresOpts.username = dbUrlParsed[1];
+        postgresOpts.database = dbUrlParsed[4];
+        postgresOpts.port = parseInt(dbUrlParsed[3], 10);
+      } else {
+        this.log.crit({
+          host: "database",
+          short_message: "Couldn't decode dev 'DATABASE_URL' string."
+        });
+      }
     } else {
       // Production Mode
       postgresOpts.host = this.config.get("database.host");
@@ -239,6 +246,17 @@ class Database {
     return command.count !== 0
       ? { ok: true, content: command }
       : { ok: false, content: "no students found", code: 404 };
+  }
+
+  async getAllPoints() {
+    const command = await this.sql`
+      SELECT *
+      FROM points;
+    `;
+
+    return command.count !== 0
+      ? { ok: true, content: command }
+      : { ok: false, content: "no points found", code: 404 };
   }
 
   async getPointsByStudentID(id) {

@@ -26,7 +26,11 @@ const log = new Log();
 
 // Pre-emptively capture all `console` output
 // But save instance of original `console.`
-const originalConsole = console;
+const originalConsole = {
+  log: console.log,
+  error: console.error,
+  info: console.info
+};
 
 console.log = (data) => {
   log.info(data);

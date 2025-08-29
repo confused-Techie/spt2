@@ -206,7 +206,59 @@ class Endpoints {
   }
 
   async getPoints(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const redirection = this.shouldUserBeRedirected(user);
 
+    if (redirection.status) {
+      res.redirect(redirection.location);
+    }
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "view:database.points");
+
+    if (!hasAccess) {
+      res.status(303).redirect("/codes/403");
+    }
+
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
+
+    try {
+      const points = await this.server.database.getAllPoints();
+
+      if (!points.ok) {
+        if (points.code === 404) {
+          res.status(303).redirect("/codes/404");
+        } else {
+          res.status(303).redirect("/codes/500");
+        }
+      } else {
+        const template = await ejs.renderFile(
+          "./views/pages/points.ejs",
+          {
+            title: "Points",
+            content: {
+              points: points.content
+            },
+            notifications: notifications
+          },
+          {
+            views: [path.resolve("./views")]
+          }
+        );
+
+        res.set("Content-Type", "text/html");
+        res.status(200).send(template);
+      }
+
+    } catch(err) {
+      this.log.crit({
+        host: "endpoints",
+        short_message: "An error in 'database.getAllStudents' cased a page to crash",
+        _err: err,
+        _page: "/students"
+      });
+
+      res.status(303).redirect("/codes/500");
+    }
   }
 
   // === Frontend: Util ===
