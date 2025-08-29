@@ -24,9 +24,9 @@ const Server = require("../src/server.js");
 
 const log = new Log();
 
-// Pre-emptively caputre all `console` output
-// But save instance of original `console.log`
-const origConsoleLog = console.log;
+// Pre-emptively capture all `console` output
+// But save instance of original `console.`
+const originalConsole = console;
 
 console.log = (data) => {
   log.info(data);
@@ -36,9 +36,27 @@ console.error = (data) => {
   log.err(data);
 };
 
+console.debug = (data) => {
+  log.debug(data);
+};
+
+console.info = (data) => {
+  log.info(data);
+};
+
+console.warn = (data) => {
+  log.warn(data);
+};
+
 // Add cli log method
 log.send.push((obj) => {
-  origConsoleLog(obj);
+  if (obj.level <= 3) {
+    originalConsole.error(obj);
+  } else if (obj.level <= 6) {
+    originalConsole.log(obj);
+  } else {
+    originalConsole.info(obj);
+  }
 });
 
 log.notice({
