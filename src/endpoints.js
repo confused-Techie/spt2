@@ -51,6 +51,7 @@ class Endpoints {
 
   }
 
+  // === Utility ===
   shouldUserBeRedirected(user) {
     // Takes a user object and determines the if and where to redirect any given user.
     if (
@@ -71,6 +72,7 @@ class Endpoints {
     }
   }
 
+  // === Frontend: Main ===
   async getHome(req, res) {
     const user = this.server.auth.getUserFromRequest(req);
     const redirection = this.shouldUserBeRedirected(user);
@@ -84,22 +86,60 @@ class Endpoints {
     // Now that redirection is checked we can continue on with our homepage.
   }
 
-  async getRequestLogin(req, res) {
-    // Since this is the failed login page and has no access to resources,
-    // we will skip any user or access steps.
-    const template = await ejs.renderFile(
-      "./views/pages/requestLogin.ejs",
-      {
-        title: "Please Login",
-        notifications: []
-      },
-      {
-        views: [path.resolve("./views")]
-      }
-    );
+  async getStudents(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const redirection = this.shouldUserBeRedirected(user);
 
-    res.set("Content-Type", "text/html");
-    res.status(200).send(template);
+    if (redirection.status) {
+      res.redirect(redirection.location);
+    }
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "view:database.students");
+
+    if (!hasAccess) {
+      res.status(303).redirect("/codes/403");
+    }
+
+    const notifications = this.server.notifications.getNotificationsForUser(user.email);
+
+    try {
+      const students = await this.server.database.getAllStudents();
+
+      if (!students.ok) {
+        if (students.code === 404) {
+          res.status(303).redirect("/codes/404");
+        } else {
+          res.status(303).redirect("/codes/500");
+        }
+      } else {
+        const template = await ejs.renderFile(
+          "./views/pages/students.ejs",
+          {
+            title: "Students",
+            content: {
+              students: students.content
+            },
+            notifications: notifications
+          },
+          {
+            views: [path.resolve("./views")]
+          }
+        );
+
+        res.set("Content-Type", "text/html");
+        res.status(200).send(template);
+      }
+
+    } catch(err) {
+      this.log.crit({
+        host: "endpoints",
+        short_message: "An error in 'database.getAllStudents' cased a page to crash",
+        _err: err,
+        _page: "/students"
+      });
+
+      res.status(303).redirect("/codes/500");
+    }
   }
 
   async getStudentsId(req, res) {
@@ -165,64 +205,27 @@ class Endpoints {
     }
   }
 
-  async getStudents(req, res) {
-    const user = this.server.auth.getUserFromRequest(req);
-    const redirection = this.shouldUserBeRedirected(user);
-
-    if (redirection.status) {
-      res.redirect(redirection.location);
-    }
-
-    const hasAccess = this.server.auth.canUserPreformAction(user, "view:database.students");
-
-    if (!hasAccess) {
-      res.status(303).redirect("/codes/403");
-    }
-
-    const notifications = this.server.notifications.getNotificationsForUser(user.email);
-
-    try {
-      const students = await this.server.database.getAllStudents();
-
-      if (!students.ok) {
-        if (students.code === 404) {
-          res.status(303).redirect("/codes/404");
-        } else {
-          res.status(303).redirect("/codes/500");
-        }
-      } else {
-        const template = await ejs.renderFile(
-          "./views/pages/students.ejs",
-          {
-            title: "Students",
-            content: {
-              students: students.content
-            },
-            notifications: notifications
-          },
-          {
-            views: [path.resolve("./views")]
-          }
-        );
-
-        res.set("Content-Type", "text/html");
-        res.status(200).send(template);
-      }
-
-    } catch(err) {
-      this.log.crit({
-        host: "endpoints",
-        short_message: "An error in 'database.getAllStudents' cased a page to crash",
-        _err: err,
-        _page: "/students"
-      });
-
-      res.status(303).redirect("/codes/500");
-    }
-  }
-
   async getPoints(req, res) {
 
+  }
+
+  // === Frontend: Util ===
+  async getRequestLogin(req, res) {
+    // Since this is the failed login page and has no access to resources,
+    // we will skip any user or access steps.
+    const template = await ejs.renderFile(
+      "./views/pages/requestLogin.ejs",
+      {
+        title: "Please Login",
+        notifications: []
+      },
+      {
+        views: [path.resolve("./views")]
+      }
+    );
+
+    res.set("Content-Type", "text/html");
+    res.status(200).send(template);
   }
 
   async getSettings(req, res) {
@@ -369,32 +372,6 @@ class Endpoints {
     res.status(200).send(template);
   }
 
-  async deleteApiNotificationId(req, res) {
-    const user = this.server.auth.getUserFromRequest(req);
-    const notificationId = req.params.id;
-
-    try {
-      const result = this.server.notifications.deleteNotification(notificationId, user.email);
-
-      if (result.ok) {
-        res.status(200).send();
-      } else {
-        if (result.code === 404) {
-          res.status(404).send();
-        } else {
-          res.status(500).send();
-        }
-      }
-    } catch(err) {
-      this.log.err({
-        host: "endpoints",
-        short_message: `Unable to delete notification '${notificationId}'.`,
-        _err: err
-      });
-      res.status(500).send();
-    }
-  }
-
   // === Code Returns ===
   async getCodes403(req, res) {
     // Skip all other checks
@@ -445,6 +422,33 @@ class Endpoints {
 
     res.set("Content-Type", "text/html");
     res.status(500).send(template);
+  }
+
+  // === API ===
+  async deleteApiNotificationId(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const notificationId = req.params.id;
+
+    try {
+      const result = this.server.notifications.deleteNotification(notificationId, user.email);
+
+      if (result.ok) {
+        res.status(200).send();
+      } else {
+        if (result.code === 404) {
+          res.status(404).send();
+        } else {
+          res.status(500).send();
+        }
+      }
+    } catch(err) {
+      this.log.err({
+        host: "endpoints",
+        short_message: `Unable to delete notification '${notificationId}'.`,
+        _err: err
+      });
+      res.status(500).send();
+    }
   }
 
 }
