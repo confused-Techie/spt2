@@ -92,6 +92,7 @@ class Endpoints {
         content: {},
         config: this.config,
         canPreformAction: (permission) => { return this.server.auth.canUserPreformAction(user, permission); },
+        notifications: notifications
       },
       {
         views: [path.resolve("./views")]

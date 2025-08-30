@@ -55,7 +55,7 @@ class Database {
       const dbUrlReg = /postgres:\/\/([\/\S]+)@([\/\S]+):(\d+)\/([\/\S]+)/;
       const dbUrlParsed = dbUrlReg.exec(dbUrl);
 
-      if (dbUrlParsed.length > 4) {
+      if (dbUrlParsed?.length > 4) {
         postgresOpts.host = dbUrlParsed[2];
         postgresOpts.username = dbUrlParsed[1];
         postgresOpts.database = dbUrlParsed[4];
@@ -87,31 +87,7 @@ class Database {
     // While tools exist to handle this, may be the simplest to just do these ourselves
     // Most tools seem to want to run via cli and all sorts of fancy business, but...
     try {
-      // But we MUST do one command at a time
-      await this.sql`CREATE EXTENSION pgcrypto;`;
-      await this.sql`
-        CREATE TABLE students (
-          student_id BIGINT NOT NULL PRIMARY KEY,
-          first_name VARCHAR(128) NOT NULL,
-          last_name VARCHAR(128) NOT NULL,
-          created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          enabled BOOLEAN NOT NULL DEFAULT TRUE,
-          points BIGINT NOT NULL DEFAULT 0
-        );
-      `;
-      await this.sql`CREATE TYPE pointsAction AS ENUM('added', 'removed');`;
-      await this.sql`
-        CREATE TABLE points (
-          point_id UUID DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
-          student BIGINT NOT NULL REFERENCES students(student_id),
-          points_modified BIGINT NOT NULL DEFAULT 0,
-          points_action pointsAction NOT NULL,
-          created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          total_points_before BIGINT NOT NULL,
-          total_points_after BIGINT NOT NULL,
-          reason text
-        );
-      `;
+      await this.migrations();
       this.log.debug({
         host: "database",
         short_message: "Preformed migrations"
@@ -138,6 +114,35 @@ class Database {
         short_message: "SQL Connection Shutdown"
       });
     }
+  }
+
+  async migrations() {
+    // try...catch handler is elsewhere, only focus on migrations here
+    // Keep in mind these migrations must be compatible with `https://github.com/confused-Techie/student-point-tracker`
+    await this.sql`CREATE EXTENSION pgcrypto;`;
+    await this.sql`CREATE TABLE IF NOT EXISTS students ();`;
+    await this.sql`ALTER TABLE students ADD COLUMN student_id BIGINT NOT NULL PRIMARY KEY;`;
+    await this.sql`ALTER TABLE students ADD COLUMN first_name VARCHAR(128) NOT NULL;`;
+    await this.sql`ALTER TABLE students ADD COLUMN last_name VARCHAR(128) NOT NULL;`;
+    await this.sql`ALTER TABLE students ADD COLUMN created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;`;
+    await this.sql`ALTER TABLE students ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT TRUE;`;
+    await this.sql`ALTER TABLE students ADD COLUMN points BIGINT NOT NULL DEFAULT 0;`;
+
+    await this.sql`CREATE TYPE pointsAction AS ENUM('added', 'removed');`;
+
+    await this.sql`CREATE TABLE IF NOT EXISTS points ();`;
+    await this.sql`ALTER TABLE points ADD COLUMN point_id UUID DEFAULT GEN_RANDOM_UUID() PRIMARY KEY;`;
+    await this.sql`ALTER TABLE points ADD COLUMN student BIGINT NOT NULL REFERENCES students(student_id);`;
+    await this.sql`ALTER TABLE points ADD COLUMN points_modified BIGINT NOT NULL DEFAULT 0;`;
+    await this.sql`ALTER TABLE points ADD COLUMN points_action pointsAction NOT NULL;`;
+    await this.sql`ALTER TABLE points ADD COLUMN created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;`;
+    await this.sql`ALTER TABLE points ADD COLUMN points_before BIGINT NOT NULL;`;
+    await this.sql`ALTER TABLE points ADD COLUMN points_after BIGINT NOT NULL;`;
+    await this.sql`ALTER TABLE points ADD COLUMN reason text;`;
+
+    // === spt2 1.0 Changes
+    await this.sql`ALTER TABLE points RENAME COLUMN points_before TO total_points_before;`;
+    await this.sql`ALTER TABLE points RENAME COLUMN points_after TO total_points_after;`;
   }
 
   // Actual Queries
