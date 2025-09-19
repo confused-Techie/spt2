@@ -26,6 +26,51 @@ module.exports = {
         type: "number",
         description: "Search result pagination limit.",
         default: 30
+      },
+      pointPresets: {
+        type: "object",
+        properties: {
+          add: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Name of the specific point preset option."
+                },
+                amount: {
+                  type: "number",
+                  description: "The amount of chips associated with this option."
+                }
+              }
+            }
+          },
+          delete: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Name of the specific point preset option."
+                },
+                amount: {
+                  type: "number",
+                  description: "The amount of chips associated with this option."
+                }
+              }
+            }
+          }
+        }
+      },
+      pointChips: {
+        type: "array",
+        description: "Frequent amounts of points awarded for easy entry.",
+        items: {
+          type: "number",
+          description: "The amount of points."
+        }
       }
     }
   },

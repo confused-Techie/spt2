@@ -1,0 +1,73 @@
+<div class="bulma-modal" id="modal-points-<%=kind%>">
+  <div class="bulma-modal-background"></div>
+  <div class="bulma-modal-content bulma-has-text-centered">
+
+    <div class="bulma-card">
+      <div class="bulma-card-header">
+        <p class="bulma-card-header-title bulma-is-centered bulma-is-size-1">
+          <% if (kind === "add") { %>Add<% } else if (kind === "delete") { %>Delete<% } %> Points
+        </p>
+      </div>
+      <div class="bulma-card-content">
+        <form name="modal-points-<%=kind%>">
+          <div class="bulma-field">
+            <label class="bulma-label">Amount of Points</label>
+            <div class="bulma-control">
+              <input class="bulma-input" type="number" placeholder="0" name="point-count">
+            </div>
+          </div>
+
+          <div class="bulma-field">
+            <label class="bulma-label">Reason</label>
+            <div class="bulma-control">
+              <input class="bulma-input" type="text" name="reason">
+            </div>
+          </div>
+
+          <% if (isBulk) { %>
+            <div class="bulma-field">
+              <label class="bulma-label">Students</label>
+              <div class="bulma-control">
+                <textarea class="bulma-textarea" name="student-id-multi"></textarea>
+              </div>
+              <p class="bulma-help">Student ID's seperated by newlines.</p>
+            </div>
+          <% } else { %>
+            <div class="bulma-field">
+              <label class="bulma-label">Student ID</label>
+              <div clas="bulma-control">
+                <input class="bulma-input" type="text" value="<%=studentID%>" readonly name="student-id">
+              </div>
+            </div>
+          <% } %>
+
+          <div class="bulma-field bulma-is-grouped">
+            <div class="bulma-control">
+              <button
+                class="bulma-button bulma-is-link"
+                onclick="modifyPoints('<%=kind%>', 'modal-points-<%=kind%>');"
+                type="button" <%# Override default submit behavior %>
+              >
+                Submit
+              </button>
+            </div>
+            <div class="bulma-control">
+              <button
+                class="bulma-button bulma-is-link bulma-is-light"
+                onclick="document.getElementById('modal-points-<%=kind%>').classList.toggle('bulma-is-active');"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <button
+      class="bulma-modal-close bulma-is-large"
+      aria-label="close"
+      onclick="document.getElementById('modal-points-<%=kind%>').classList.toggle('bulma-is-active');"
+    >
+  </div>
+</div>

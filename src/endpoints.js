@@ -42,6 +42,7 @@ class Endpoints {
     frontend.app.get("/codes/500", this.getCodes500.bind(this));
 
     // === API ===
+    frontend.app.post("/api/students/:id/points", this.postApiStudentsIdPoints.bind(this));
     frontend.app.delete("/api/notification/:id", this.deleteApiNotificationId.bind(this));
 
     // === Resources ===
@@ -494,6 +495,51 @@ class Endpoints {
   }
 
   // === API ===
+  async postApiStudentsIdPoints(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+
+    const studentId = req.params.id;
+    const reason = req.query.reason;
+    const pointCount = req.query.points;
+    const action = req.query.action;
+
+    const hasAccess = this.server.auth.canUserPreformAction(user, "edit:database.points");
+
+    if (!hasAccess) {
+      res.status(403).send();
+    }
+
+    try {
+      let result = null;
+      if (action === "add") {
+        result = await this.server.database.addPointsToStudent(studentId, pointCount, reason);
+      } else if (action === "delete") {
+        result = await this.server.database.removePointsFromStudent(studentId, pointCount, reason);
+      }
+
+      if (result.ok) {
+        res.status(200).send();
+      } else {
+        if (result.code === 404) {
+          res.status(404).send();
+        } else {
+          res.status(500).send();
+        }
+      }
+    } catch(err) {
+      this.log.err({
+        host: "endpoints",
+        short_message: "Unable to modify student points.",
+        _err: err,
+        _studentId: studentId,
+        _reason: reason,
+        _pointCount: pointCount,
+        _action: action
+      });
+      res.status(500).send();
+    }
+  }
+
   async deleteApiNotificationId(req, res) {
     const user = this.server.auth.getUserFromRequest(req);
     const notificationId = req.params.id;

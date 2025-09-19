@@ -3,10 +3,10 @@
     <div class="bulma-card-content">
       <div class="bulma-content bulma-has-text-centered">
         <div class="bulma-block">
-          <button class="bulma-button">
+          <button class="bulma-button" onclick="document.getElementById('modal-points-delete').classList.toggle('bulma-is-active');">
             Bulk Remove Points
           </button>
-          <button class="bulma-button">
+          <button class="bulma-button" onclick="document.getElementById('modal-points-add').classList.toggle('bulma-is-active');">
             Bulk Add Points
           </button>
         </div>
@@ -21,4 +21,9 @@
       </div>
     </div>
   </div>
+
+  <%# Modals %>
+  <%- include("./fragments/points-modal", { kind: "add", isBulk: true }); %>
+  <%- include("./fragments/points-modal", { kind: "delete", isBulk: true }); %>
+
 <%- include("./fragments/footer"); %>
