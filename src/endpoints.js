@@ -43,6 +43,7 @@ class Endpoints {
 
     // === API ===
     frontend.app.post("/api/students/:id/points", this.postApiStudentsIdPoints.bind(this));
+    frontend.app.patch("/api/notification/", this.patchApiNotification.bind(this));
     frontend.app.delete("/api/notification/:id", this.deleteApiNotificationId.bind(this));
 
     // === Resources ===
@@ -535,6 +536,32 @@ class Endpoints {
         _reason: reason,
         _pointCount: pointCount,
         _action: action
+      });
+      res.status(500).send();
+    }
+  }
+
+  async patchApiNotification(req, res) {
+    const user = this.server.auth.getUserFromRequest(req);
+    const msg = req.query.msg;
+    const status = req.query.status;
+
+    try {
+      const result = this.server.notifications.addNotification(msg, status, user.email);
+      if (typeof result === "string") {
+        // We got an ID back and it was successful
+        res.status(200).send();
+      } else {
+        res.status(500).send();
+      }
+    } catch(err) {
+      this.log.err({
+        host: "endpoints",
+        short_message: "Unable to add a new notification.",
+        _err: err,
+        _user: user.email,
+        _msg: msg,
+        _status: status
       });
       res.status(500).send();
     }

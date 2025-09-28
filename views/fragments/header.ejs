@@ -55,6 +55,8 @@
         class="
           bulma-notification
           <% if (notification.status === "success") { %> bulma-is-success <% } %>
+          <% if (notification.status === "warning") { %> bulma-is-warning <% } %>
+          <% if (notification.status === "danger") { %> bulma-is-danger <% } %>
         "
         data-id="<%= notification.id %>"
       >

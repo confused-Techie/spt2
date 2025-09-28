@@ -9,6 +9,8 @@ class Notifications {
   }
 
   addNotification(notificationMsg, status, email) {
+    // Status' are roughly manually mapped to bulma notification classes
+    // Currently supports: success, warnning, danger
     if (!this.notifications[email]) {
       this.notifications[email] = [];
     }
