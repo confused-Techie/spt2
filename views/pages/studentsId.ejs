@@ -16,6 +16,14 @@
           <li>Enabled: <%= content.student.enabled %></li>
           <li>Points: <%= content.student.points %></li>
         </ul>
+        <div class="bulma-block">
+          <button class="bulma-button" onclick="document.getElementById('modal-points-delete').classList.toggle('bulma-is-active');">
+            Remove Points
+          </button>
+          <button class="bulma-button" onclick="document.getElementById('modal-points-add').classList.toggle('bulma-is-active');">
+            Add Points
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -50,4 +58,8 @@
       <% } %>
     </tbody>
   </table>
+
+  <%# Modals %>
+  <%- include("./fragments/points-modal", { kind: "add", isBulk: false }); %>
+  <%- include("./fragments/points-modal", { kind: "delete", isBulk: false }); %>
 <%- include("./fragments/footer"); %>
