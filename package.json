@@ -1,6 +1,20 @@
 {
+  "name": "spt2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./src/server.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/confused-Techie/spt2"
+  },
+  "author": "confused-Techie",
+  "license": "MIT",
   "dependencies": {
     "@databases/pg-test": "^3.1.2",
+    "assert-extensions": "github:confused-Techie/assert-extensions",
     "compression": "^1.8.1",
     "ejs": "^3.1.10",
     "express": "^5.1.0",

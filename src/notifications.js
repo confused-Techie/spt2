@@ -29,12 +29,18 @@ class Notifications {
   }
 
   deleteNotification(notificationId, email) {
+    if (!this.notifications[email]) {
+      // Couldn't find the user
+      return { ok: false, code: 404 };
+    }
+    
     for (let i = 0; i < this.notifications[email].length; i++) {
       if (this.notifications[email][i].id === notificationId) {
         this.notifications[email].splice(i, 1);
         return { ok: true };
       }
     }
+    // Couldn't find the specified notification ID
     return { ok: false, code: 404 };
   }
 
