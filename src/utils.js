@@ -8,7 +8,7 @@ function capitalize(word) {
 function uncamelcase(string) {
   if (!string) { return ""; }
 
-  const result = string.replace(/([A-Z])|_+/g, (match, letter="") => ` ${letter}`);
+  const result = string.replace(/(?<=[^\s_])([A-Z])|_+/g, (match, letter="") => (letter ? ` ${letter}` : " "));
   return capitalize(result.trim());
 }
 
