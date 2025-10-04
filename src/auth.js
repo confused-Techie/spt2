@@ -2,7 +2,7 @@
   Assists in determining the permissions of a user and if they are authenticated.
 */
 
-const RE_PERMISSION = /^(?<action>[a-z*]+):(?<namespace>[a-z*]+).(?<resource>[a-z*]+)/;
+const RE_PERMISSION = /^(?<action>[a-z*]+):(?<namespace>[a-z*]+)\.(?<resource>[a-z*]+)/;
 // ^^ We stopped matching until end of line so that we can accept overly specific
 // permissions requests. This made life easy for the settings page. But realistically
 // will still acomplish the same thing
@@ -17,7 +17,7 @@ class Auth {
 
   getUserFromRequest(req) {
     // Takes an ExpressJS Request object and returns a user object
-    const usrObj = req.user;
+    const usrObj = req?.user ?? false;
 
     if (typeof usrObj !== "object" || Object.keys(usrObj).length < 1) {
       // There is no found usrObj
@@ -53,7 +53,7 @@ class Auth {
   }
 
   canUserPreformAction(usrObj, permission) {
-    if (typeof usrObj !== "object" || Object.keys(usrObj).length < 1) {
+    if (!usrObj || typeof usrObj !== "object" || Object.keys(usrObj).length < 1 || !Object.hasOwn(usrObj, "permissions")) {
       // No valid usrObj provided
       return false;
     }
